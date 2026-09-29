@@ -57,6 +57,9 @@ def build(block_fc: pd.DataFrame, gps: pd.DataFrame, blocks: pd.DataFrame) -> pd
     block_fc["date"] = pd.to_datetime(block_fc["date"])
     own = block_fc.rename(columns={v: f"bf_{v}" for v in DAILY if v in block_fc})
     rows = gps.merge(own, on="block_lgd", how="inner")
+    for c in BF:  # a variable the forecast source did not provide stays as missing values
+        if c not in rows:
+            rows[c] = np.nan
 
     # inverse-distance interpolation of each variable across blocks
     order = blocks.block_lgd.tolist()
@@ -65,6 +68,9 @@ def build(block_fc: pd.DataFrame, gps: pd.DataFrame, blocks: pd.DataFrame) -> pd
     idx = pd.MultiIndex.from_frame(keys)
     interp = []
     for v in INTERPOLATED:
+        if v not in block_fc:
+            interp.append(np.full((len(idx), len(gps)), np.nan))
+            continue
         wide = block_fc.pivot_table(index=["date", "lead_day"], columns="block_lgd", values=v,
                                     aggfunc="first").reindex(index=idx, columns=order)
         vals = wide.to_numpy()                              # (time, blocks)

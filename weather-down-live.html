@@ -31,6 +31,7 @@ main{max-width:1320px;margin:0 auto;padding:20px 24px 50px}
 .timeline button{background:var(--teal);border:none;color:#0d1c17;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:13px;flex:none}
 .timeline input{flex:1;accent-color:#4FA895}
 .timeline b{min-width:92px;font-size:13px}
+@media(max-width:700px){.timeline{bottom:96px;width:92%}.metrics{left:54px;right:58px}.metrics button{padding:5px 8px}}
 #busy{position:absolute;inset:0;z-index:900;display:none;align-items:center;justify-content:center;background:rgba(21,36,32,.75);font-size:14px}
 .legend{padding:8px 10px;font-size:12px;min-width:150px;color:var(--text)}
 .legend .ramp{height:8px;border-radius:4px;margin:6px 0 3px}
@@ -60,7 +61,9 @@ ul{margin:0;padding-left:18px;font-size:13px;line-height:1.8}
 #alerts{list-style:none;padding:0}
 #alerts li{padding:9px 12px;border-radius:8px;background:var(--panel2);margin-bottom:8px;cursor:pointer;border-left:3px solid var(--heavy)}
 #alerts li.ok{border-left-color:var(--teal);cursor:default}
+.tablewrap{overflow-x:auto}
 table.skill{width:100%;border-collapse:collapse;font-size:13px}
+@media(max-width:700px){table.skill{font-size:12px}table.skill th,table.skill td{padding:6px 5px}}
 table.skill th,table.skill td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right}
 table.skill th:first-child,table.skill td:first-child{text-align:left}
 table.skill th{color:var(--muted);font-weight:500}
@@ -119,7 +122,7 @@ table.skill td.good{color:#8fe0bb;font-weight:600}table.skill td.bad{color:var(-
 
   <section class="card" style="margin-bottom:18px">
     <h3 style="color:var(--text)">How much better than the block forecast?</h3>
-    <table class="skill" id="skillTable"></table>
+    <div class="tablewrap"><table class="skill" id="skillTable"></table></div>
     <div class="note" id="skillNote"></div>
   </section>
   <div class="foot" id="prov"></div>

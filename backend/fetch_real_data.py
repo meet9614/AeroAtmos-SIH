@@ -89,18 +89,21 @@ def fetch_landcover(geojson: Path) -> pd.DataFrame | None:
         return None
     classes = {"lc_tree": [10], "lc_cropland": [40], "lc_builtup": [50], "lc_water": [80, 90],
                "lc_other": [20, 30, 60, 70, 95, 100]}
-    rows = []
+    rows, open_tiles = [], {}
     feats = json.loads(geojson.read_text())["features"]
     with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR", CPL_VSIL_CURL_ALLOWED_EXTENSIONS=".tif"):
         for f in feats:
             lon, lat = _first_coord(f["geometry"])
             tile = f"N{int(math.floor(lat / 3) * 3):02d}E{int(math.floor(lon / 3) * 3):03d}"
-            with rasterio.open(WORLDCOVER.format(tile=tile)) as src:
-                out, _ = mask(src, [f["geometry"]], crop=True, nodata=0)
+            if tile not in open_tiles:
+                open_tiles[tile] = rasterio.open(WORLDCOVER.format(tile=tile))
+            out, _ = mask(open_tiles[tile], [f["geometry"]], crop=True, nodata=0)
             vals = out[0][out[0] > 0]
             total = max(len(vals), 1)
             rows.append({"panchayat_id": f["properties"]["panchayat_id"],
                          **{k: round(float(np.isin(vals, v).sum()) / total, 3) for k, v in classes.items()}})
+    for src in open_tiles.values():
+        src.close()
     return pd.DataFrame(rows)
 
 
