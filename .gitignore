@@ -6,3 +6,5 @@ __pycache__/
 .DS_Store
 .lgd_cache/
 backend/data/cache/
+Claude outputs/
+*.bundle

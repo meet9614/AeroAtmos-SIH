@@ -1,0 +1,465 @@
+{
+  "variables": {
+    "rain": {
+      "name": "Rainfall (mm)",
+      "unseen_panchayats": {
+        "mae": {
+          "model": 3.818,
+          "block_forecast": 4.352,
+          "bias_corrected_block": 4.688,
+          "interpolated_blocks": 4.314
+        },
+        "rows": 19800,
+        "mae_by_lead_day": {
+          "1": {
+            "model": 3.239,
+            "block_forecast": 3.263
+          },
+          "2": {
+            "model": 3.611,
+            "block_forecast": 3.778
+          },
+          "3": {
+            "model": 4.032,
+            "block_forecast": 4.616
+          },
+          "4": {
+            "model": 4.097,
+            "block_forecast": 5.293
+          },
+          "5": {
+            "model": 4.109,
+            "block_forecast": 4.81
+          }
+        },
+        "improvement_vs_block_forecast_pct": 12.3,
+        "improvement_vs_best_baseline_pct": 11.5
+      },
+      "all_panchayats": {
+        "mae": {
+          "model": 3.816,
+          "block_forecast": 4.348,
+          "bias_corrected_block": 4.699,
+          "interpolated_blocks": 4.309
+        },
+        "rows": 78300,
+        "mae_by_lead_day": {
+          "1": {
+            "model": 3.225,
+            "block_forecast": 3.23
+          },
+          "2": {
+            "model": 3.631,
+            "block_forecast": 3.792
+          },
+          "3": {
+            "model": 4.015,
+            "block_forecast": 4.628
+          },
+          "4": {
+            "model": 4.119,
+            "block_forecast": 5.304
+          },
+          "5": {
+            "model": 4.091,
+            "block_forecast": 4.786
+          }
+        },
+        "improvement_vs_block_forecast_pct": 12.2,
+        "improvement_vs_best_baseline_pct": 11.4
+      }
+    },
+    "tmax": {
+      "name": "Max temperature (\u00b0C)",
+      "unseen_panchayats": {
+        "mae": {
+          "model": 1.625,
+          "block_forecast": 4.366,
+          "bias_corrected_block": 2.19,
+          "interpolated_blocks": 4.363
+        },
+        "rows": 19800,
+        "mae_by_lead_day": {
+          "1": {
+            "model": 1.531,
+            "block_forecast": 4.64
+          },
+          "2": {
+            "model": 1.55,
+            "block_forecast": 4.41
+          },
+          "3": {
+            "model": 1.647,
+            "block_forecast": 4.305
+          },
+          "4": {
+            "model": 1.67,
+            "block_forecast": 4.274
+          },
+          "5": {
+            "model": 1.728,
+            "block_forecast": 4.203
+          }
+        },
+        "improvement_vs_block_forecast_pct": 62.8,
+        "improvement_vs_best_baseline_pct": 25.8
+      },
+      "all_panchayats": {
+        "mae": {
+          "model": 1.64,
+          "block_forecast": 4.357,
+          "bias_corrected_block": 2.182,
+          "interpolated_blocks": 4.351
+        },
+        "rows": 78300,
+        "mae_by_lead_day": {
+          "1": {
+            "model": 1.545,
+            "block_forecast": 4.622
+          },
+          "2": {
+            "model": 1.569,
+            "block_forecast": 4.399
+          },
+          "3": {
+            "model": 1.662,
+            "block_forecast": 4.299
+          },
+          "4": {
+            "model": 1.683,
+            "block_forecast": 4.267
+          },
+          "5": {
+            "model": 1.738,
+            "block_forecast": 4.197
+          }
+        },
+        "improvement_vs_block_forecast_pct": 62.4,
+        "improvement_vs_best_baseline_pct": 24.8
+      }
+    },
+    "tmin": {
+      "name": "Min temperature (\u00b0C)",
+      "unseen_panchayats": {
+        "mae": {
+          "model": 1.069,
+          "block_forecast": 2.471,
+          "bias_corrected_block": 1.379,
+          "interpolated_blocks": 2.461
+        },
+        "rows": 19800,
+        "mae_by_lead_day": {
+          "1": {
+            "model": 1.016,
+            "block_forecast": 2.826
+          },
+          "2": {
+            "model": 1.01,
+            "block_forecast": 2.566
+          },
+          "3": {
+            "model": 1.064,
+            "block_forecast": 2.393
+          },
+          "4": {
+            "model": 1.105,
+            "block_forecast": 2.279
+          },
+          "5": {
+            "model": 1.148,
+            "block_forecast": 2.289
+          }
+        },
+        "improvement_vs_block_forecast_pct": 56.7,
+        "improvement_vs_best_baseline_pct": 22.5
+      },
+      "all_panchayats": {
+        "mae": {
+          "model": 1.071,
+          "block_forecast": 2.469,
+          "bias_corrected_block": 1.381,
+          "interpolated_blocks": 2.46
+        },
+        "rows": 78300,
+        "mae_by_lead_day": {
+          "1": {
+            "model": 1.017,
+            "block_forecast": 2.817
+          },
+          "2": {
+            "model": 1.012,
+            "block_forecast": 2.563
+          },
+          "3": {
+            "model": 1.068,
+            "block_forecast": 2.395
+          },
+          "4": {
+            "model": 1.107,
+            "block_forecast": 2.284
+          },
+          "5": {
+            "model": 1.15,
+            "block_forecast": 2.289
+          }
+        },
+        "improvement_vs_block_forecast_pct": 56.6,
+        "improvement_vs_best_baseline_pct": 22.4
+      }
+    },
+    "rh": {
+      "name": "Humidity (%)",
+      "unseen_panchayats": {
+        "mae": {
+          "model": 6.545,
+          "block_forecast": 19.617,
+          "bias_corrected_block": 8.022,
+          "interpolated_blocks": 19.59
+        },
+        "rows": 19800,
+        "mae_by_lead_day": {
+          "1": {
+            "model": 6.354,
+            "block_forecast": 23.796
+          },
+          "2": {
+            "model": 6.455,
+            "block_forecast": 20.725
+          },
+          "3": {
+            "model": 6.613,
+            "block_forecast": 18.656
+          },
+          "4": {
+            "model": 6.42,
+            "block_forecast": 17.521
+          },
+          "5": {
+            "model": 6.881,
+            "block_forecast": 17.385
+          }
+        },
+        "improvement_vs_block_forecast_pct": 66.6,
+        "improvement_vs_best_baseline_pct": 18.4
+      },
+      "all_panchayats": {
+        "mae": {
+          "model": 6.574,
+          "block_forecast": 19.568,
+          "bias_corrected_block": 8.02,
+          "interpolated_blocks": 19.539
+        },
+        "rows": 78300,
+        "mae_by_lead_day": {
+          "1": {
+            "model": 6.372,
+            "block_forecast": 23.717
+          },
+          "2": {
+            "model": 6.476,
+            "block_forecast": 20.671
+          },
+          "3": {
+            "model": 6.646,
+            "block_forecast": 18.615
+          },
+          "4": {
+            "model": 6.454,
+            "block_forecast": 17.485
+          },
+          "5": {
+            "model": 6.92,
+            "block_forecast": 17.352
+          }
+        },
+        "improvement_vs_block_forecast_pct": 66.4,
+        "improvement_vs_best_baseline_pct": 18.0
+      }
+    },
+    "wind": {
+      "name": "Wind (km/h)",
+      "unseen_panchayats": {
+        "mae": {
+          "model": 2.527,
+          "block_forecast": 5.725,
+          "bias_corrected_block": 2.939,
+          "interpolated_blocks": 5.71
+        },
+        "rows": 19800,
+        "mae_by_lead_day": {
+          "1": {
+            "model": 2.189,
+            "block_forecast": 5.314
+          },
+          "2": {
+            "model": 2.412,
+            "block_forecast": 5.886
+          },
+          "3": {
+            "model": 2.541,
+            "block_forecast": 5.593
+          },
+          "4": {
+            "model": 2.738,
+            "block_forecast": 6.004
+          },
+          "5": {
+            "model": 2.755,
+            "block_forecast": 5.827
+          }
+        },
+        "improvement_vs_block_forecast_pct": 55.9,
+        "improvement_vs_best_baseline_pct": 14.0
+      },
+      "all_panchayats": {
+        "mae": {
+          "model": 2.524,
+          "block_forecast": 5.729,
+          "bias_corrected_block": 2.929,
+          "interpolated_blocks": 5.725
+        },
+        "rows": 78300,
+        "mae_by_lead_day": {
+          "1": {
+            "model": 2.189,
+            "block_forecast": 5.319
+          },
+          "2": {
+            "model": 2.41,
+            "block_forecast": 5.89
+          },
+          "3": {
+            "model": 2.534,
+            "block_forecast": 5.599
+          },
+          "4": {
+            "model": 2.733,
+            "block_forecast": 6.006
+          },
+          "5": {
+            "model": 2.752,
+            "block_forecast": 5.83
+          }
+        },
+        "improvement_vs_block_forecast_pct": 55.9,
+        "improvement_vs_best_baseline_pct": 13.8
+      }
+    }
+  },
+  "rain_categories": {
+    "unseen_panchayats": {
+      "light rain or more (>=2.5 mm)": {
+        "model": {
+          "hit_rate": 0.813,
+          "false_alarm_ratio": 0.314,
+          "critical_success_index": 0.593,
+          "observed_events": 7915
+        },
+        "block_forecast": {
+          "hit_rate": 0.637,
+          "false_alarm_ratio": 0.223,
+          "critical_success_index": 0.538,
+          "observed_events": 7915
+        }
+      },
+      "moderate rain or more (>=15.6 mm)": {
+        "model": {
+          "hit_rate": 0.316,
+          "false_alarm_ratio": 0.657,
+          "critical_success_index": 0.197,
+          "observed_events": 1830
+        },
+        "block_forecast": {
+          "hit_rate": 0.453,
+          "false_alarm_ratio": 0.594,
+          "critical_success_index": 0.272,
+          "observed_events": 1830
+        }
+      }
+    },
+    "all_panchayats": {
+      "light rain or more (>=2.5 mm)": {
+        "model": {
+          "hit_rate": 0.814,
+          "false_alarm_ratio": 0.325,
+          "critical_success_index": 0.584,
+          "observed_events": 30705
+        },
+        "block_forecast": {
+          "hit_rate": 0.639,
+          "false_alarm_ratio": 0.236,
+          "critical_success_index": 0.534,
+          "observed_events": 30705
+        }
+      },
+      "moderate rain or more (>=15.6 mm)": {
+        "model": {
+          "hit_rate": 0.319,
+          "false_alarm_ratio": 0.671,
+          "critical_success_index": 0.193,
+          "observed_events": 6920
+        },
+        "block_forecast": {
+          "hit_rate": 0.458,
+          "false_alarm_ratio": 0.609,
+          "critical_success_index": 0.267,
+          "observed_events": 6920
+        }
+      }
+    }
+  },
+  "rain_chance": {
+    "unseen_panchayats": {
+      "brier": {
+        "model": 0.1778,
+        "block_forecast_yes_no": 0.2184,
+        "monthly_climatology": 0.1579
+      },
+      "observed_rain_day_rate": 0.4
+    },
+    "all_panchayats": {
+      "brier": {
+        "model": 0.1794,
+        "block_forecast_yes_no": 0.2188,
+        "monthly_climatology": 0.158
+      },
+      "observed_rain_day_rate": 0.392
+    }
+  },
+  "split": {
+    "train_period": "2024-01-01 to 2026-03-25",
+    "test_period": "2026-03-26 to 2026-09-21",
+    "panchayats": 87,
+    "unseen_panchayats": 22,
+    "unseen_panchayat_ids": [
+      "GP95491",
+      "GP95712",
+      "GP95718",
+      "GP95733",
+      "GP95736",
+      "GP95739",
+      "GP95746",
+      "GP95748",
+      "GP98831",
+      "GP98856",
+      "GP98863",
+      "GP98864",
+      "GP98866",
+      "GP98975",
+      "GP98984",
+      "GP98986",
+      "GP98987",
+      "GP99007",
+      "GP99009",
+      "GP99012",
+      "GP99015",
+      "GP99023"
+    ]
+  },
+  "data": {
+    "source": "open-meteo",
+    "block_forecast": "gfs_seamless via Open-Meteo (stand-in for IMD block forecast)",
+    "truth": "ecmwf_ifs archive via Open-Meteo",
+    "fetched_at": "2026-09-29 18:25 IST"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "fetched_at": "2026-09-29 18:25 IST",
+  "source": "open-meteo",
+  "start": "2024-01-01",
+  "end": "2026-09-21",
+  "forecast_model": "gfs_seamless",
+  "truth_model": "ecmwf_ifs",
+  "block_forecast_rows": 24875,
+  "panchayat_obs_rows": 86565,
+  "landcover": true
+}

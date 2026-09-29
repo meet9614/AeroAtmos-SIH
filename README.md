@@ -41,7 +41,8 @@ AeroAtmos/
 │   └── tools/
 │       ├── build_panchayats.py   # Rebuilds data/panchayats.* from LGD boundaries (already done)
 │       └── mock_open_meteo.py    # Offline test double — simulated data, never present as real
-└── weather-down-live.html     # Dashboard: map, 5-day timeline, charts, advisory, model skill
+├── weather-down-live.html     # Dashboard: map, 5-day timeline, charts, advisory, model skill
+└── docs/                      # SIH 2026 idea presentation (PPTX + PDF)
 ```
 
 ## Data sources
@@ -127,7 +128,18 @@ Advisories use IMD's 24-hour rainfall categories (very light 0.1–2.4 mm, light
 
 Reported: mean absolute error per variable and lead day; for rain, hit rate / false-alarm ratio / critical success index at 2.5 mm and 15.6 mm; and the Brier score of the chance of rain. The dashboard shows the same table ("How much better than the block forecast?").
 
-> Paste the table printed by `train_model.py` here after running it on the real data.
+**Results on real data** — 22 of 87 panchayats never seen in training, test period 2026-03-26 – 2026-09-21, truth = ECMWF IFS 9 km analysis. Mean absolute error:
+
+| Variable | Our model | Block forecast as-is | Bias-corrected block | Interpolated blocks | Error vs block forecast |
+|---|---|---|---|---|---|
+| Rainfall (mm) | 3.82 | 4.35 | 4.69 | 4.31 | −12% |
+| Max temperature (°C) | 1.62 | 4.37 | 2.19 | 4.36 | −63% |
+| Min temperature (°C) | 1.07 | 2.47 | 1.38 | 2.46 | −57% |
+| Humidity (%) | 6.54 | 19.62 | 8.02 | 19.59 | −67% |
+| Wind (km/h) | 2.53 | 5.72 | 2.94 | 5.71 | −56% |
+
+- Rain days (≥ 2.5 mm) caught: 81% vs 64% for the block forecast (false alarms 31% vs 22%).
+- Known weak spots: moderate-rain days (≥ 15.6 mm) caught 32% vs 45% for the block forecast; the chance-of-rain Brier score is 0.178 vs 0.158 for the monthly average, so it is not yet better than climatology.
 
 ---
 

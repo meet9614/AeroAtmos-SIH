@@ -8,3 +8,4 @@ scikit-learn==1.9.1
 joblib==1.5.3
 requests==2.33.1
 # Optional, adds land-cover features in fetch_real_data.py:  pip install rasterio
+rasterio
