@@ -1,0 +1,31 @@
+{
+  "data": "synthetic data",
+  "method": "5-fold cross-validation grouped by panchayat (scores on unseen panchayats)",
+  "rows": 252,
+  "metrics": {
+    "rainfall_mm": {
+      "model_mae": 2.01,
+      "baseline": "block forecast",
+      "baseline_mae": 2.27,
+      "improvement_pct": 11.2
+    },
+    "temperature_c": {
+      "model_mae": 0.42,
+      "baseline": "block forecast",
+      "baseline_mae": 0.43,
+      "improvement_pct": 2.5
+    },
+    "humidity_pct": {
+      "model_mae": 3.82,
+      "baseline": "monthly climatology",
+      "baseline_mae": 3.82,
+      "improvement_pct": 0.0
+    },
+    "wind_kmph": {
+      "model_mae": 2.37,
+      "baseline": "mean wind",
+      "baseline_mae": 2.37,
+      "improvement_pct": 0.0
+    }
+  }
+}

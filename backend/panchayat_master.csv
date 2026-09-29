@@ -1,22 +1,22 @@
 panchayat_id,panchayat,block,district,lat,lon,elevation_m,soil_type,land_use,hist_avg_rainfall_mm,hist_avg_temp_c
-P0001,Masaurhi Buzurg,Masaurhi,Patna,25.5862,84.9457,83.1,clayey,mixed_agri,19.9,29.3
-P0002,Dhanarua,Masaurhi,Patna,25.6138,84.9408,77.2,loamy,fallow,22.3,29.3
-P0003,Chishi,Masaurhi,Patna,25.6322,84.8545,86.4,loamy,mixed_agri,19.1,29.6
-P0004,Sarai,Masaurhi,Patna,25.6738,84.9374,83.9,sandy_loam,paddy,22.7,31.7
-P0005,Nadwan,Masaurhi,Patna,25.5922,84.9164,82.2,loamy,fallow,17.4,29.4
-P0006,Bahadurpur,Masaurhi,Patna,25.6237,84.867,51.5,clayey,vegetable,15.9,32.3
-P0007,Kishunpur,Masaurhi,Patna,25.6205,84.9314,80.0,alluvial,wheat_maize,16.7,31.5
-P0008,Amanabad,Masaurhi,Patna,25.6155,84.8769,79.1,clayey,paddy,23.4,31.1
-P0009,Bikram Purab,Bikram,Patna,25.6258,84.9164,67.9,clayey,vegetable,18.6,34.0
-P0010,Bikram Paschim,Bikram,Patna,25.6221,84.8854,73.3,alluvial,mixed_agri,20.8,32.2
-P0011,Lakhna,Bikram,Patna,25.6112,84.8687,46.5,loamy,vegetable,24.3,30.6
-P0012,Maranchi,Bikram,Patna,25.6406,84.8617,47.9,sandy_loam,wheat_maize,20.7,32.4
-P0013,Naubatpur Uttari,Naubatpur,Patna,25.5527,84.9147,85.7,loamy,paddy,18.2,30.2
-P0014,Naubatpur Dakshini,Naubatpur,Patna,25.5585,84.9202,53.1,sandy_loam,vegetable,22.4,31.9
-P0015,Deoria,Naubatpur,Patna,25.5309,84.9122,60.1,clayey,mixed_agri,11.6,28.1
-P0016,Tikari Purab,Tikari,Gaya,25.0936,85.4687,83.9,loamy,mixed_agri,15.3,30.6
-P0017,Tikari Paschim,Tikari,Gaya,25.0766,85.4621,67.8,clayey,wheat_maize,22.2,31.5
-P0018,Amethi,Tikari,Gaya,25.0847,85.4575,82.9,loamy,mixed_agri,21.2,31.0
-P0019,Sherghati Uttar,Sherghati,Gaya,24.9781,85.3984,47.1,alluvial,vegetable,24.2,31.7
-P0020,Sherghati Dakshin,Sherghati,Gaya,24.98,85.4156,53.5,loamy,fallow,18.1,28.2
-P0021,Bhaluatand,Sherghati,Gaya,25.0287,85.3591,92.9,loamy,vegetable,21.6,32.7
+P0001,Masaurhi Buzurg,Masaurhi,Patna,25.3774,85.0339,87.9,alluvial,mixed_agri,10.2,28.4
+P0002,Dhanarua,Masaurhi,Patna,25.3761,85.0686,51.4,sandy_loam,vegetable,24.4,32.6
+P0003,Chishi,Masaurhi,Patna,25.3644,85.0723,67.2,loamy,wheat_maize,21.8,29.1
+P0004,Sarai,Masaurhi,Patna,25.3828,85.0532,82.9,clayey,wheat_maize,26.1,30.7
+P0005,Nadwan,Masaurhi,Patna,25.3778,85.0095,68.3,loamy,paddy,22.1,31.9
+P0006,Bahadurpur,Masaurhi,Patna,25.3745,85.0868,61.3,sandy_loam,wheat_maize,23.1,33.3
+P0007,Kishunpur,Masaurhi,Patna,25.313,85.0376,56.3,clayey,mixed_agri,23.7,32.1
+P0008,Amanabad,Masaurhi,Patna,25.3832,85.0705,64.4,sandy_loam,wheat_maize,24.4,31.4
+P0009,Bikram Purab,Bikram,Patna,25.41,84.8107,84.3,sandy_loam,mixed_agri,12.7,30.4
+P0010,Bikram Paschim,Bikram,Patna,25.4359,84.8669,52.0,alluvial,paddy,15.7,32.9
+P0011,Lakhna,Bikram,Patna,25.4465,84.8865,76.7,clayey,vegetable,23.6,32.6
+P0012,Maranchi,Bikram,Patna,25.3931,84.8537,55.7,loamy,vegetable,13.6,28.7
+P0013,Naubatpur Uttari,Naubatpur,Patna,25.3158,84.9081,59.7,loamy,mixed_agri,17.9,31.3
+P0014,Naubatpur Dakshini,Naubatpur,Patna,25.3764,84.9206,85.7,loamy,paddy,18.2,30.2
+P0015,Deoria,Naubatpur,Patna,25.3822,84.9262,53.1,sandy_loam,vegetable,22.4,31.9
+P0016,Tikari Purab,Tikari,Gaya,24.9246,84.8381,60.1,clayey,mixed_agri,11.6,28.1
+P0017,Tikari Paschim,Tikari,Gaya,24.8918,84.8962,90.4,loamy,mixed_agri,18.1,33.6
+P0018,Amethi,Tikari,Gaya,24.9579,84.8717,67.5,clayey,wheat_maize,15.2,30.3
+P0019,Sherghati Uttar,Sherghati,Gaya,24.5456,84.7602,60.3,sandy_loam,vegetable,17.0,28.1
+P0020,Sherghati Dakshin,Sherghati,Gaya,24.5759,84.8119,66.6,loamy,mixed_agri,28.0,30.5
+P0021,Bhaluatand,Sherghati,Gaya,24.5084,84.7816,47.1,alluvial,vegetable,24.2,31.7
