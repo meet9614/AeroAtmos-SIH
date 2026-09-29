@@ -100,6 +100,8 @@ Open `weather-down-live.html` in a browser while the API is running. If the API 
 
 > Commit the files from steps 1–2 (`backend/data/*.csv`, `*.json`, `backend/models/`) so teammates can skip straight to step 3. Don't commit `backend/data/cache/`.
 
+**If the download fails:** run `--check` to see which service fails. Re-running resumes from the cache. If Open-Meteo rejects the forecast model, try `--forecast-model gfs_global` (or `ecmwf_ifs025`); if it reports a rate limit, wait an hour and re-run.
+
 ---
 
 ## How the model works
