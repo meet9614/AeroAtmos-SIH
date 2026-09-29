@@ -95,7 +95,7 @@ ul{margin:0;padding-left:18px;font-size:13px;line-height:1.8}
     <div class="kpi"><div class="k">Temperature</div><div class="v" id="kTemp">—</div></div>
     <div class="kpi"><div class="k">Humidity</div><div class="v" id="kHum">—</div></div>
     <div class="kpi"><div class="k">Wind</div><div class="v" id="kWind">—</div></div>
-    <div class="kpi"><div class="k">Rain probability</div><div class="v" id="kProb">—</div><div class="bar"><i id="probBar"></i></div></div>
+    <div class="kpi"><div class="k">Chance of rain (≥2.5 mm)</div><div class="v" id="kProb">—</div><div class="bar"><i id="probBar"></i></div></div>
   </section>
 
   <section class="grid2">
@@ -107,13 +107,15 @@ ul{margin:0;padding-left:18px;font-size:13px;line-height:1.8}
     <div class="card adv"><h3 style="color:var(--text)">Farmer advisory</h3><p id="advIntro"></p><ul id="advList"></ul></div>
     <div class="card"><h3>Alerts in this block</h3><ul id="alerts"></ul></div>
   </section>
+  <div class="foot" id="skill"></div>
   <div class="foot">Every number is a live prediction from your FastAPI + ML backend. Map tiles © Esri.</div>
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
-const API='http://127.0.0.1:8000';
+// Backend URL: defaults to a local uvicorn; override with ?api=https://your-server when deployed
+const API=(new URLSearchParams(location.search).get('api')||'http://127.0.0.1:8000').replace(/\/$/,'');
 const $=id=>document.getElementById(id);
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const METRICS={
@@ -140,7 +142,7 @@ sat.addTo(map);names.addTo(map);group.addTo(map);
 const ctl=L.control.layers({Satellite:sat,Street:street},{'Place names':names,'Panchayat data':group}).addTo(map);
 fetch('https://api.rainviewer.com/public/weather-maps.json').then(r=>r.json()).then(d=>{
   const p=d.radar.past,l=p[p.length-1];
-  ctl.addOverlay(L.tileLayer(`${d.host}${l.path}/256/{z}/{x}/{y}/2/1_1.png`,{opacity:.6,maxNativeZoom:7,maxZoom:18,attribution:'Radar © RainViewer'}),'Rain radar');
+  ctl.addOverlay(L.tileLayer(`${d.host}${l.path}/256/{z}/{x}/{y}/2/1_1.png`,{opacity:.6,maxNativeZoom:7,maxZoom:18,attribution:'Radar © RainViewer'}),'Rain radar (live, now)');
 }).catch(()=>{});
 let legEl;const legend=L.control({position:'bottomleft'});
 legend.onAdd=()=>{legEl=L.DomUtil.create('div','legend glass');return legEl;};legend.addTo(map);
@@ -161,8 +163,13 @@ function drawMarkers(rows,selId){
 // ---------- data loading ----------
 async function init(){
   try{const d=await api('/districts');$('apiStatus').textContent='backend connected';$('apiStatus').className='status ok';
-    $('district').innerHTML=d.map(x=>`<option>${x}</option>`).join('');await fillBlocks();}
+    $('district').innerHTML=d.map(x=>`<option>${x}</option>`).join('');await fillBlocks();showSkill();}
   catch(e){$('apiStatus').textContent='backend offline — start uvicorn';}
+}
+async function showSkill(){
+  try{const s=await api('/model/skill'),r=s.metrics.rainfall_mm,t=s.metrics.temperature_c;
+    $('skill').textContent=`Model check (${s.data}, unseen panchayats): rainfall error ${r.model_mae} mm vs ${r.baseline_mae} mm for the raw block forecast (${r.improvement_pct>0?r.improvement_pct+'% better':'no gain'}); temperature ${t.model_mae} °C vs ${t.baseline_mae} °C.`;}
+  catch(e){}
 }
 async function fillBlocks(){
   const b=await api('/blocks/'+encodeURIComponent($('district').value));
@@ -193,11 +200,13 @@ function render(){
   $('kWind').textContent=sel.wind_kmph+' km/h';$('kProb').textContent=sel.rain_probability_pct+' %';
   $('probBar').style.width=sel.rain_probability_pct+'%';
 
-  $('advIntro').textContent=sel.rainfall_mm>=30?'🌧️ Heavy rainfall expected':sel.rainfall_mm>=10?'🌦️ Moderate rain expected':sel.temperature_c>=36?'☀️ Hot and dry conditions':'⛅ Mild conditions expected';
+  // IMD 24-hour rainfall categories come from the backend (rain_category)
+  $('advIntro').textContent=sel.rainfall_mm>=64.5?`🌧️ ${sel.rain_category} expected`:sel.rainfall_mm>=15.6?`🌦️ ${sel.rain_category} expected`
+    :sel.temperature_c>=36?'☀️ Hot and dry conditions':`⛅ ${sel.rain_category} expected`;
   $('advList').innerHTML=sel.advisory.map(t=>`<li>${t}</li>`).join('');
-  const al=rows.filter(r=>r.rainfall_mm>=30||r.temperature_c>=38);
-  $('alerts').innerHTML=al.length?al.map(r=>`<li data-id="${r.panchayat_id}"><b>${r.panchayat}</b> — ${r.rainfall_mm>=30?'Heavy rain, '+r.rainfall_mm+' mm':'Heat, '+r.temperature_c+' °C'}</li>`).join('')
-    :`<li class="ok">No severe alerts in this block for ${MON[month-1]}.</li>`;
+  const al=rows.filter(r=>r.rainfall_mm>=15.6||r.temperature_c>=38);
+  $('alerts').innerHTML=al.length?al.map(r=>`<li data-id="${r.panchayat_id}"><b>${r.panchayat}</b> — ${r.rainfall_mm>=15.6?r.rain_category+', '+r.rainfall_mm+' mm':'Heat, '+r.temperature_c+' °C'}</li>`).join('')
+    :`<li class="ok">No moderate-or-heavier rain or heat alerts in this block for ${MON[month-1]}.</li>`;
   charts(sel,rows);
 }
 function charts(sel,rows){
