@@ -28,14 +28,14 @@ The output is then turned into a **plain-language farmer advisory** (e.g. *"avoi
 AeroAtmos/
 ├── backend/
 │   ├── data_generator.py     # Generates the synthetic District→Block→Panchayat dataset
-│   ├── train_model.py        # Trains the RandomForest downscaling model
+│   ├── train_model.py        # Trains the downscaling model and checks it against baselines
 │   ├── app.py                 # FastAPI backend serving live predictions
-│   ├── requirements.txt
+│   ├── requirements.txt       # Pinned versions (Python 3.11+)
 │   ├── panchayat_master.csv   # Generated: panchayat hierarchy + geo/soil/land-use data
 │   ├── training_data.csv      # Generated: 12-month training examples
-│   └── downscaling_model.joblib  # Generated: trained model
-├── weather-down-live.html     # Interactive dashboard (map, charts, advisory) — talks to the backend
-└── weather-down.html          # Standalone demo version (simulated data, no backend needed)
+│   ├── downscaling_model.joblib  # Generated: trained model
+│   └── validation_report.json # Generated: model vs. baseline scores (served at /model/skill)
+└── weather-down-live.html     # Interactive dashboard (map, charts, advisory) — talks to the backend
 ```
 
 ## Features
@@ -44,8 +44,10 @@ AeroAtmos/
 - **12-month timeline** with play/scrub controls to see seasonal variation
 - **Block forecast → AI panchayat forecast comparison** — the core value proposition, shown explicitly
 - **Trend and comparison charts** — historical average vs. block forecast vs. AI prediction, and a ranked view of all panchayats in a block
-- **Automated farmer advisory** generated from the predicted conditions
-- **Alerts panel** flagging panchayats crossing heavy-rain or heat thresholds
+- **Automated farmer advisory** generated from the predicted conditions, using IMD's 24-hour rainfall categories (very light 0.1–2.4 mm, light 2.5–15.5, moderate 15.6–64.4, heavy 64.5–115.5 …)
+- **Alerts panel** flagging panchayats with moderate-or-heavier rain or heat
+- **Chance of rain** from the model itself: the share of the random forest's trees that predict at least 2.5 mm
+- **Model check** shown on the page: error on unseen panchayats vs. simply using the block forecast
 - **CSV export** of a block's full 12-month forecast
 - **Live FastAPI backend** with interactive Swagger docs at `/docs`
 
@@ -55,7 +57,7 @@ AeroAtmos/
 
 | Layer | Technology |
 |---|---|
-| ML Model | scikit-learn (RandomForest, multi-output regression) |
+| ML Model | scikit-learn (RandomForest on the block-forecast correction + linear lapse-rate correction) |
 | Backend API | FastAPI + Uvicorn |
 | Data | pandas, numpy |
 | Frontend | HTML/CSS/JS, Leaflet.js (map), Chart.js (charts) |
@@ -63,6 +65,8 @@ AeroAtmos/
 ---
 
 ## Getting Started
+
+Requires **Python 3.11+**.
 
 ### 1. Set up the backend
 
@@ -89,12 +93,12 @@ uvicorn app:app --reload
 ```
 
 The API is now live at `http://127.0.0.1:8000` — see interactive docs at `http://127.0.0.1:8000/docs`.
+(From the repo root instead: `uvicorn app:app --reload --app-dir backend`. The backend always reads its files from `backend/`.)
 
 ### 4. Open the dashboard
 
 Open `weather-down-live.html` directly in your browser (double-click it) while the server from step 3 is running. It connects automatically to `http://127.0.0.1:8000`.
-
-> Prefer a version with no backend setup? Open `weather-down.html` instead — it runs a client-side simulation of the same downscaling logic, no server required.
+If the backend runs somewhere else, add it to the URL: `weather-down-live.html?api=https://your-server.example.com`.
 
 ---
 
@@ -105,8 +109,28 @@ Open `weather-down-live.html` directly in your browser (double-click it) while t
 | `GET /districts` | List all districts |
 | `GET /blocks/{district}` | List blocks in a district |
 | `GET /panchayats/{block}` | List panchayats in a block |
-| `GET /forecast/{panchayat_id}?month=` | Downscaled forecast + advisory for one panchayat |
+| `GET /forecast/{panchayat_id}?month=` | Downscaled forecast + advisory for one panchayat (`month` 1–12, defaults to the current month) |
 | `GET /forecast/block/{block}?month=` | Downscaled forecast for every panchayat in a block |
+| `GET /model/skill` | Validation report: model vs. baseline error on unseen panchayats |
+
+---
+
+## How the model works and how well it does
+
+- **Rainfall:** a RandomForest learns the *correction* to the block forecast (panchayat value minus block value) from each panchayat's location, elevation, soil, land use and history. Predicting the correction keeps it anchored to the block forecast.
+- **Temperature:** a linear correction on elevation (a lapse rate learned from the data).
+- **Humidity and wind:** the synthetic data has no panchayat-level signal for these, so the model uses the training climatology instead of pretending to learn one.
+
+`train_model.py` scores the model with 5-fold cross-validation **grouped by panchayat** — every score is on panchayats the model never saw — against the obvious baseline:
+
+| Variable | Model MAE | Baseline | Baseline MAE |
+|---|---|---|---|
+| Rainfall | 2.01 mm | block forecast as-is | 2.27 mm (**model 11% better**) |
+| Temperature | 0.42 °C | block forecast as-is | 0.43 °C |
+| Humidity | 3.82 % | monthly climatology | 3.82 % |
+| Wind | 2.37 km/h | mean wind | 2.37 km/h |
+
+These numbers are on synthetic data, so they show the pipeline works — not real-world accuracy.
 
 ---
 
@@ -115,9 +139,9 @@ Open `weather-down-live.html` directly in your browser (double-click it) while t
 This is a working prototype built to prove the downscaling pipeline end-to-end:
 
 - **Data:** Currently synthetic (2 districts, 5 blocks, ~21 panchayats in Bihar) — generated with realistic seasonal and geographic patterns. Real deployment would use IMD's block forecast API and Census/SDMA panchayat boundaries.
-- **Model:** RandomForest chosen for fast prototyping with zero extra native dependencies. Architecture supports swapping in XGBoost or spatial models (CNN/GNN) as a next step.
+- **Model:** scikit-learn only, for zero extra native dependencies. The block-forecast *correction* setup carries over to gradient boosting or spatial models (CNN/GNN) once real data is in.
 - **Delivery:** Dashboard is the demo interface; real-world deployment would extend to SMS/IVR/WhatsApp alerts for farmers without smartphone access.
-- **Validation:** Model accuracy is currently measured against synthetic data; next step is validation against real ground-station observations.
+- **Validation:** Currently measured on synthetic data (table above); next step is validation against real ground-station observations (IMD AWS, Bihar Mausam Sewa Kendra rain gauges).
 
 ---
 
