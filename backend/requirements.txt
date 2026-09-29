@@ -1,8 +1,10 @@
 # Python 3.11+ (pandas 3 / numpy 2.4 / scikit-learn 1.9 need it)
-# scikit-learn is pinned exactly: the saved model only loads reliably with the version that trained it.
+# scikit-learn is pinned exactly: a saved model only loads reliably with the version that trained it.
 fastapi==0.141.1
 uvicorn[standard]==0.46.0
 pandas==3.0.2
 numpy==2.4.4
 scikit-learn==1.9.1
 joblib==1.5.3
+requests==2.33.1
+# Optional, adds land-cover features in fetch_real_data.py:  pip install rasterio

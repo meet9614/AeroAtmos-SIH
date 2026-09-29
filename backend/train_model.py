@@ -1,33 +1,30 @@
 """
-train_model.py
-Trains the AeroAtmos downscaling model and checks it against simple baselines.
+train_model.py — trains AeroAtmos's panchayat downscaling models on the data
+from fetch_real_data.py, and checks them against simple baselines.
 
 Model
 -----
-- Rainfall: a RandomForest learns the *correction* to the block forecast
-  (panchayat value minus block value) from each panchayat's features.
-  Predicting the correction keeps the model anchored to the block forecast; it
-  gave lower rainfall error than predicting raw values.
-- Temperature: a linear correction on elevation (a lapse rate learned from the
-  data). The RandomForest could not beat the block forecast for temperature.
-- Humidity and wind: in the synthetic data these depend only on the season plus
-  random noise, so there is nothing panchayat-specific to learn. The honest
-  model is the training climatology (monthly mean humidity, mean wind). Replace
-  this with a learned model once real observations are available.
+For each variable IMD's agromet advisories use (rainfall, max/min temperature,
+humidity, wind), a gradient-boosted model learns the *correction* to the block
+forecast for a panchayat: (panchayat value - block forecast), from the block
+forecast itself, block forecasts interpolated from neighbouring blocks, the
+panchayat's position, size and terrain, the lead day (1-5) and the season.
+A classifier gives the chance of at least 2.5 mm of rain (IMD "light rain").
 
-Validation
-----------
-5-fold cross-validation grouped by panchayat, so every score is measured on
-panchayats the model never saw during training (the real downscaling use case).
-Baselines:
-- rainfall, temperature: use the block forecast unchanged
-- humidity: monthly climatology;  wind: overall mean
-Results are printed and saved to validation_report.json (served at /model/skill).
+Validation (honest by construction)
+-----------------------------------
+- Time: the last 180 days are held out; models only see earlier days.
+- Space: a quarter of the panchayats in every block are never used in
+  training, so we can score places the model has never seen.
+Baselines on exactly the same rows:
+- block forecast as-is (what a farmer gets today)
+- bias-corrected block forecast (average correction per lead day and month)
+- distance-weighted interpolation between block forecasts
+Metrics: MAE per variable and lead day; for rain also hit rate / false alarms
+at IMD thresholds, and the Brier score of the chance of rain.
 
-Run:
-    python data_generator.py   # first, to create training_data.csv
-    python train_model.py
-Produces: downscaling_model.joblib, validation_report.json
+Run:  python train_model.py
+Outputs: models/downscaling.joblib, validation_report.json
 """
 
 import json
@@ -36,96 +33,163 @@ from pathlib import Path
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.compose import ColumnTransformer
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_absolute_error
-from sklearn.model_selection import GroupKFold
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.ensemble import HistGradientBoostingClassifier, HistGradientBoostingRegressor
+
+import features as F
+from weather import TARGETS
 
 BASE = Path(__file__).resolve().parent
-
-NUMERIC = ["month", "block_forecast_rain_mm", "block_forecast_temp_c",
-           "lat", "lon", "elevation_m", "hist_avg_rainfall_mm", "hist_avg_temp_c"]
-CATEGORICAL = ["soil_type", "land_use"]
-FEATURES = NUMERIC + CATEGORICAL
-
-
-def make_rain_model() -> Pipeline:
-    preprocess = ColumnTransformer([
-        ("cat", OneHotEncoder(handle_unknown="ignore"), CATEGORICAL),
-    ], remainder="passthrough")
-    forest = RandomForestRegressor(n_estimators=300, min_samples_leaf=10,
-                                   random_state=42, n_jobs=-1)
-    return Pipeline([("prep", preprocess), ("reg", forest)])
+DATA = BASE / "data"
+HOLDOUT_DAYS = 180
+RAIN_DAY_MM = 2.5
+RAIN_THRESHOLDS = {"light rain or more (>=2.5 mm)": 2.5, "moderate rain or more (>=15.6 mm)": 15.6}
+LIMITS = {"rain": (0, None), "rh": (0, 100), "wind": (0, None)}
+NAMES = {"rain": "Rainfall (mm)", "tmax": "Max temperature (°C)", "tmin": "Min temperature (°C)",
+         "rh": "Humidity (%)", "wind": "Wind (km/h)"}
+BOOSTING = dict(learning_rate=0.05, max_iter=500, max_leaf_nodes=31, min_samples_leaf=40,
+                l2_regularization=1.0, early_stopping=True, validation_fraction=0.1,
+                n_iter_no_change=30, random_state=0)
 
 
-def fit(df: pd.DataFrame) -> dict:
-    return {
-        "rain_correction": make_rain_model().fit(
-            df[FEATURES], df.true_rainfall_mm - df.block_forecast_rain_mm),
-        "temp_correction": LinearRegression().fit(
-            df[["elevation_m"]], df.true_temp_c - df.block_forecast_temp_c),
-        "humidity_by_month": df.groupby("month").true_humidity_pct.mean().to_dict(),
-        "wind_mean": float(df.true_wind_kmph.mean()),
-        "features": FEATURES,
-    }
+def clip(v: str, x):
+    lo, hi = LIMITS.get(v, (None, None))
+    return np.clip(x, lo, hi) if (lo is not None or hi is not None) else x
 
 
-def predict(bundle: dict, X: pd.DataFrame) -> dict:
-    rain_corr = bundle["rain_correction"].predict(X[bundle["features"]])
-    temp_corr = bundle["temp_correction"].predict(X[["elevation_m"]])
-    return {
-        "rainfall_mm": np.clip(X.block_forecast_rain_mm.to_numpy() + rain_corr, 0, None),
-        "temperature_c": X.block_forecast_temp_c.to_numpy() + temp_corr,
-        "humidity_pct": X.month.map(bundle["humidity_by_month"]).to_numpy(),
-        "wind_kmph": np.full(len(X), bundle["wind_mean"]),
-    }
+def load_table():
+    gps, blocks = F.load_places(DATA)
+    bf = pd.read_csv(DATA / "block_forecasts.csv")
+    obs = pd.read_csv(DATA / "panchayat_obs.csv", parse_dates=["date"])
+    table = F.build(bf, gps, blocks).merge(obs.rename(columns={v: f"obs_{v}" for v in TARGETS}),
+                                           on=["panchayat_id", "date"], how="inner")
+    return table, F.feature_columns(gps), gps
 
 
-def validate(df: pd.DataFrame) -> dict:
-    truth = {"rainfall_mm": "true_rainfall_mm", "temperature_c": "true_temp_c",
-             "humidity_pct": "true_humidity_pct", "wind_kmph": "true_wind_kmph"}
-    scores = {k: {"model": [], "baseline": []} for k in truth}
-    for train_idx, test_idx in GroupKFold(n_splits=5).split(df, groups=df.panchayat_id):
-        tr, te = df.iloc[train_idx], df.iloc[test_idx]
-        pred = predict(fit(tr), te)
-        baseline = {
-            "rainfall_mm": te.block_forecast_rain_mm,
-            "temperature_c": te.block_forecast_temp_c,
-            "humidity_pct": te.month.map(tr.groupby("month").true_humidity_pct.mean()),
-            "wind_kmph": np.full(len(te), tr.true_wind_kmph.mean()),
-        }
-        for k, col in truth.items():
-            scores[k]["model"].append(mean_absolute_error(te[col], pred[k]))
-            scores[k]["baseline"].append(mean_absolute_error(te[col], baseline[k]))
+def split(table: pd.DataFrame, gps: pd.DataFrame):
+    cutoff = table.date.max() - pd.Timedelta(days=HOLDOUT_DAYS)
+    rng = np.random.default_rng(42)
+    unseen = set()
+    for _, grp in gps.groupby("block_lgd"):
+        ids = grp.panchayat_id.to_numpy()
+        unseen |= set(rng.choice(ids, size=max(1, round(len(ids) / 4)), replace=False).tolist())
+    is_unseen = table.panchayat_id.isin(unseen)
+    train = table[(table.date <= cutoff) & ~is_unseen]
+    test = table[table.date > cutoff]
+    return train, test, test[test.panchayat_id.isin(unseen)], cutoff, sorted(unseen)
 
-    names = {"rainfall_mm": "block forecast", "temperature_c": "block forecast",
-             "humidity_pct": "monthly climatology", "wind_kmph": "mean wind"}
-    metrics = {}
-    for k in truth:
-        m, b = float(np.mean(scores[k]["model"])), float(np.mean(scores[k]["baseline"]))
-        metrics[k] = {"model_mae": round(m, 2), "baseline": names[k], "baseline_mae": round(b, 2),
-                      "improvement_pct": round(100 * (b - m) / b, 1)}
-    return {
-        "data": "synthetic data",
-        "method": "5-fold cross-validation grouped by panchayat (scores on unseen panchayats)",
-        "rows": len(df),
-        "metrics": metrics,
-    }
+
+def mae(a, b):
+    m = ~(np.isnan(a) | np.isnan(b))
+    return float(np.mean(np.abs(a[m] - b[m])))
+
+
+def categorical(obs, pred, thr):
+    o, p = obs >= thr, pred >= thr
+    hits, misses, false = int((o & p).sum()), int((o & ~p).sum()), int((~o & p).sum())
+    return {"hit_rate": round(hits / max(hits + misses, 1), 3),
+            "false_alarm_ratio": round(false / max(hits + false, 1), 3),
+            "critical_success_index": round(hits / max(hits + misses + false, 1), 3),
+            "observed_events": hits + misses}
+
+
+def evaluate(train, test_sets, feats):
+    report = {"variables": {}, "rain_categories": {}, "rain_chance": {}}
+    for v in TARGETS:
+        tr = train.dropna(subset=[f"obs_{v}", f"bf_{v}"])
+        y = tr[f"obs_{v}"] - tr[f"bf_{v}"]
+        model = HistGradientBoostingRegressor(**BOOSTING).fit(tr[feats], y)
+        bias = y.groupby([tr.lead_day, tr.date.dt.month]).mean()
+        report["variables"][v] = {"name": NAMES[v]}
+        for label, te in test_sets.items():
+            te = te.dropna(subset=[f"obs_{v}", f"bf_{v}"])
+            obs, raw = te[f"obs_{v}"].to_numpy(), te[f"bf_{v}"].to_numpy()
+            keys = pd.MultiIndex.from_arrays([te.lead_day, te.date.dt.month])
+            corr = bias.reindex(keys).fillna(float(y.mean())).to_numpy()
+            preds = {
+                "model": clip(v, raw + model.predict(te[feats])),
+                "block_forecast": raw,
+                "bias_corrected_block": clip(v, raw + corr),
+                "interpolated_blocks": te[f"idw_{v}"].to_numpy(),
+            }
+            scores = {k: round(mae(obs, p), 3) for k, p in preds.items()}
+            leads = te.lead_day.to_numpy()
+            by_lead = {int(d): {"model": round(mae(obs[leads == d], preds["model"][leads == d]), 3),
+                                "block_forecast": round(mae(obs[leads == d], raw[leads == d]), 3)}
+                       for d in sorted(set(leads))}
+            best_base = min(s for k, s in scores.items() if k != "model")
+            report["variables"][v][label] = {
+                "mae": scores, "rows": int(len(te)), "mae_by_lead_day": by_lead,
+                "improvement_vs_block_forecast_pct": round(100 * (1 - scores["model"] / scores["block_forecast"]), 1),
+                "improvement_vs_best_baseline_pct": round(100 * (1 - scores["model"] / best_base), 1)}
+            if v == "rain":
+                report["rain_categories"][label] = {
+                    name: {"model": categorical(obs, preds["model"], t),
+                           "block_forecast": categorical(obs, raw, t)}
+                    for name, t in RAIN_THRESHOLDS.items()}
+
+    # chance of rain (>= 2.5 mm)
+    tr = train.dropna(subset=["obs_rain"])
+    clf = HistGradientBoostingClassifier(**BOOSTING).fit(tr[feats], tr.obs_rain >= RAIN_DAY_MM)
+    clim = (tr.obs_rain >= RAIN_DAY_MM).groupby(tr.date.dt.month).mean()
+    for label, te in test_sets.items():
+        te = te.dropna(subset=["obs_rain"])
+        y = (te.obs_rain >= RAIN_DAY_MM).to_numpy(float)
+        probs = {"model": clf.predict_proba(te[feats])[:, 1],
+                 "block_forecast_yes_no": (te.bf_rain >= RAIN_DAY_MM).to_numpy(float),
+                 "monthly_climatology": te.date.dt.month.map(clim).to_numpy(float)}
+        report["rain_chance"][label] = {
+            "brier": {k: round(float(np.mean((p - y) ** 2)), 4) for k, p in probs.items()},
+            "observed_rain_day_rate": round(float(y.mean()), 3)}
+    return report
+
+
+def fit_final(table, feats):
+    models = {}
+    for v in TARGETS:
+        t = table.dropna(subset=[f"obs_{v}", f"bf_{v}"])
+        models[v] = HistGradientBoostingRegressor(**BOOSTING).fit(t[feats], t[f"obs_{v}"] - t[f"bf_{v}"])
+    t = table.dropna(subset=["obs_rain"])
+    return {"models": models,
+            "rain_chance": HistGradientBoostingClassifier(**BOOSTING).fit(t[feats], t.obs_rain >= RAIN_DAY_MM),
+            "features": feats, "limits": LIMITS}
+
+
+def print_summary(report):
+    s = report["split"]
+    print(f"\nTest period {s['test_period']}, on {s['unseen_panchayats']} of {s['panchayats']} "
+          f"panchayats never seen in training.  Mean absolute error:")
+    print(f"  {'variable':22s} {'model':>7s} {'block fc':>9s} {'bias-corr':>10s} {'interp':>8s}   model vs block")
+    for v, r in report["variables"].items():
+        m = r["unseen_panchayats"]["mae"]
+        print(f"  {r['name']:22s} {m['model']:7.2f} {m['block_forecast']:9.2f} "
+              f"{m['bias_corrected_block']:10.2f} {m['interpolated_blocks']:8.2f}   "
+              f"{r['unseen_panchayats']['improvement_vs_block_forecast_pct']:+.1f}%")
+    b = report["rain_chance"]["unseen_panchayats"]["brier"]
+    print(f"  Chance of rain (Brier, lower is better): model {b['model']:.3f}, "
+          f"block yes/no {b['block_forecast_yes_no']:.3f}, climatology {b['monthly_climatology']:.3f}")
 
 
 if __name__ == "__main__":
-    df = pd.read_csv(BASE / "training_data.csv")
+    table, feats, gps = load_table()
+    train, test_all, test_unseen, cutoff, unseen = split(table, gps)
+    meta_file = DATA / "fetch_meta.json"
+    meta = json.loads(meta_file.read_text()) if meta_file.exists() else {}
+    print(f"{len(table):,} panchayat-day-lead rows; training on {len(train):,}")
 
-    report = validate(df)
-    print(f"Validation on unseen panchayats ({report['method']}):")
-    print(f"  {'variable':15s} {'model MAE':>10s} {'baseline MAE':>13s}  baseline")
-    for k, m in report["metrics"].items():
-        print(f"  {k:15s} {m['model_mae']:10.2f} {m['baseline_mae']:13.2f}  {m['baseline']}"
-              f"  ({m['improvement_pct']:+.1f}%)")
+    report = evaluate(train, {"unseen_panchayats": test_unseen, "all_panchayats": test_all}, feats)
+    report["split"] = {
+        "train_period": f"{table.date.min():%Y-%m-%d} to {cutoff:%Y-%m-%d}",
+        "test_period": f"{cutoff + pd.Timedelta(days=1):%Y-%m-%d} to {table.date.max():%Y-%m-%d}",
+        "panchayats": int(gps.panchayat_id.nunique()), "unseen_panchayats": len(unseen),
+        "unseen_panchayat_ids": unseen}
+    report["data"] = {
+        "source": meta.get("source", "unknown"),
+        "block_forecast": f"{meta.get('forecast_model', '?')} via Open-Meteo (stand-in for IMD block forecast)",
+        "truth": f"{meta.get('truth_model', '?')} archive via Open-Meteo",
+        "fetched_at": meta.get("fetched_at")}
     (BASE / "validation_report.json").write_text(json.dumps(report, indent=2))
+    print_summary(report)
 
-    joblib.dump(fit(df), BASE / "downscaling_model.joblib", compress=3)
-    print("\nSaved model -> downscaling_model.joblib, report -> validation_report.json")
+    (BASE / "models").mkdir(exist_ok=True)
+    joblib.dump(fit_final(table, feats), BASE / "models" / "downscaling.joblib", compress=3)
+    print("\nSaved models/downscaling.joblib and validation_report.json")

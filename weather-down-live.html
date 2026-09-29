@@ -18,18 +18,19 @@ select,.btn{background:var(--panel2);border:1px solid var(--line);color:var(--te
 .btn{cursor:pointer}.btn:hover,select:focus{border-color:var(--teal);outline:none}
 .status{font-size:12px;padding:6px 10px;border-radius:6px;background:#4a2323;color:#f0a3a3}
 .status.ok{background:#1f4a3a;color:#8fe0bb}
+.banner{display:none;background:#5a3a12;color:#ffd9a0;text-align:center;padding:8px 16px;font-size:13px;font-weight:600;letter-spacing:.02em}
 main{max-width:1320px;margin:0 auto;padding:20px 24px 50px}
 .mapwrap{position:relative;border-radius:14px;overflow:hidden;border:1px solid var(--line);margin-bottom:18px}
 #map{height:560px;background:var(--panel2)}
 @media(max-width:700px){#map{height:440px}main{padding:14px}}
 .glass{background:rgba(21,36,32,.86);backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:10px}
-.metrics{position:absolute;top:12px;left:58px;z-index:800;display:flex;gap:4px;padding:5px}
+.metrics{position:absolute;top:12px;left:58px;z-index:800;display:flex;gap:4px;padding:5px;flex-wrap:wrap}
 .metrics button{background:none;border:none;color:var(--muted);padding:6px 11px;border-radius:7px;font:inherit;font-size:13px;cursor:pointer}
 .metrics button.on{background:var(--teal);color:#0d1c17;font-weight:600}
 .timeline{position:absolute;bottom:26px;left:50%;transform:translateX(-50%);z-index:800;display:flex;gap:12px;align-items:center;padding:8px 14px;width:min(560px,86%)}
 .timeline button{background:var(--teal);border:none;color:#0d1c17;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:13px;flex:none}
 .timeline input{flex:1;accent-color:#4FA895}
-.timeline b{width:34px;font-size:13px}
+.timeline b{min-width:92px;font-size:13px}
 #busy{position:absolute;inset:0;z-index:900;display:none;align-items:center;justify-content:center;background:rgba(21,36,32,.75);font-size:14px}
 .legend{padding:8px 10px;font-size:12px;min-width:150px;color:var(--text)}
 .legend .ramp{height:8px;border-radius:4px;margin:6px 0 3px}
@@ -54,16 +55,24 @@ main{max-width:1320px;margin:0 auto;padding:20px 24px 50px}
 .cv{position:relative;height:270px}
 .adv{border-left:3px solid var(--ochre);padding-left:14px}
 .adv p{margin:0 0 8px;font-size:14px}
+.adv .outlook{color:var(--muted);font-size:13px;margin-top:10px}
 ul{margin:0;padding-left:18px;font-size:13px;line-height:1.8}
 #alerts{list-style:none;padding:0}
 #alerts li{padding:9px 12px;border-radius:8px;background:var(--panel2);margin-bottom:8px;cursor:pointer;border-left:3px solid var(--heavy)}
 #alerts li.ok{border-left-color:var(--teal);cursor:default}
-.foot{text-align:center;color:var(--muted);font-size:12px;margin-top:8px}
+table.skill{width:100%;border-collapse:collapse;font-size:13px}
+table.skill th,table.skill td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right}
+table.skill th:first-child,table.skill td:first-child{text-align:left}
+table.skill th{color:var(--muted);font-weight:500}
+table.skill td.good{color:#8fe0bb;font-weight:600}table.skill td.bad{color:var(--ochre)}
+.note{color:var(--muted);font-size:12px;line-height:1.6;margin-top:10px}
+.foot{text-align:center;color:var(--muted);font-size:12px;margin-top:8px;line-height:1.6}
 </style>
 </head>
 <body>
+<div class="banner" id="banner">SIMULATED DATA — produced by the offline test mode, not real weather. Run fetch_real_data.py for real data.</div>
 <header class="top">
-  <div class="brand"><h1>AeroAtmos</h1><span>AI-Powered Hyperlocal Weather Downscaling · Team AERO VISION</span></div>
+  <div class="brand"><h1>AeroAtmos</h1><span>Panchayat-level weather downscaling · Team AERO VISION · SIH 26074</span></div>
   <div class="ctrls">
     <select id="district"></select><select id="block"></select><select id="panchayat"></select>
     <button class="btn" id="csv">⬇ Export CSV</button>
@@ -75,14 +84,14 @@ ul{margin:0;padding-left:18px;font-size:13px;line-height:1.8}
   <section class="mapwrap">
     <div id="map"></div>
     <div class="metrics glass" id="metricBtns">
-      <button data-m="rain" class="on">Rainfall</button><button data-m="temp">Temperature</button>
-      <button data-m="hum">Humidity</button><button data-m="wind">Wind</button>
+      <button data-m="rain" class="on">Rainfall</button><button data-m="tmax">Max temp</button>
+      <button data-m="tmin">Min temp</button><button data-m="hum">Humidity</button><button data-m="wind">Wind</button>
     </div>
     <div class="timeline glass">
-      <button id="play" title="Play through the year">▶</button>
-      <input type="range" id="slider" min="1" max="12" value="1"><b id="monthLbl"></b>
+      <button id="play" title="Play through the 5 days">▶</button>
+      <input type="range" id="slider" min="1" max="5" value="1"><b id="dayLbl"></b>
     </div>
-    <div id="busy">Loading 12-month forecasts from the model…</div>
+    <div id="busy">Downscaling the block forecast…</div>
   </section>
 
   <div class="selhead">
@@ -92,23 +101,29 @@ ul{margin:0;padding-left:18px;font-size:13px;line-height:1.8}
 
   <section class="kpis">
     <div class="kpi"><div class="k">Rainfall</div><div class="v" id="kRain">—</div><div class="d" id="kDelta"></div></div>
-    <div class="kpi"><div class="k">Temperature</div><div class="v" id="kTemp">—</div></div>
+    <div class="kpi"><div class="k">Max / min temperature</div><div class="v" id="kTemp">—</div></div>
     <div class="kpi"><div class="k">Humidity</div><div class="v" id="kHum">—</div></div>
-    <div class="kpi"><div class="k">Wind</div><div class="v" id="kWind">—</div></div>
+    <div class="kpi"><div class="k">Wind</div><div class="v" id="kWind">—</div><div class="d" id="kCloud"></div></div>
     <div class="kpi"><div class="k">Chance of rain (≥2.5 mm)</div><div class="v" id="kProb">—</div><div class="bar"><i id="probBar"></i></div></div>
   </section>
 
   <section class="grid2">
-    <div class="card"><h3>12-month rainfall — AI panchayat vs IMD block vs historical (mm)</h3><div class="cv"><canvas id="trend"></canvas></div></div>
-    <div class="card"><h3>All panchayats in this block — <span id="cmpMonth"></span> rainfall (mm)</h3><div class="cv"><canvas id="cmp"></canvas></div></div>
+    <div class="card"><h3>Next 5 days — panchayat forecast vs block forecast</h3><div class="cv"><canvas id="trend"></canvas></div></div>
+    <div class="card"><h3>All panchayats in this block — <span id="cmpDay"></span> rainfall (mm)</h3><div class="cv"><canvas id="cmp"></canvas></div></div>
   </section>
 
   <section class="grid2">
-    <div class="card adv"><h3 style="color:var(--text)">Farmer advisory</h3><p id="advIntro"></p><ul id="advList"></ul></div>
-    <div class="card"><h3>Alerts in this block</h3><ul id="alerts"></ul></div>
+    <div class="card adv"><h3 style="color:var(--text)">Farmer advisory — <span id="advDay"></span></h3><p id="advIntro"></p><ul id="advList"></ul><div class="outlook" id="outlook"></div></div>
+    <div class="card"><h3>Alerts in this block — <span id="alertDay"></span></h3><ul id="alerts"></ul></div>
   </section>
-  <div class="foot" id="skill"></div>
-  <div class="foot">Every number is a live prediction from your FastAPI + ML backend. Map tiles © Esri.</div>
+
+  <section class="card" style="margin-bottom:18px">
+    <h3 style="color:var(--text)">How much better than the block forecast?</h3>
+    <table class="skill" id="skillTable"></table>
+    <div class="note" id="skillNote"></div>
+  </section>
+  <div class="foot" id="prov"></div>
+  <div class="foot">Map tiles © Esri · Panchayat boundaries: LGD village boundaries (datameet)</div>
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
@@ -117,29 +132,31 @@ ul{margin:0;padding-left:18px;font-size:13px;line-height:1.8}
 // Backend URL: defaults to a local uvicorn; override with ?api=https://your-server when deployed
 const API=(new URLSearchParams(location.search).get('api')||'http://127.0.0.1:8000').replace(/\/$/,'');
 const $=id=>document.getElementById(id);
-const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const METRICS={
   rain:{label:'Rainfall',unit:'mm',key:'rainfall_mm',lo:0,hi:40,ramp:['#4FA895','#C68B3D','#C1553B']},
-  temp:{label:'Temperature',unit:'°C',key:'temperature_c',lo:15,hi:42,ramp:['#4C86A8','#E8C468','#C1553B']},
-  hum:{label:'Humidity',unit:'%',key:'humidity_pct',lo:40,hi:95,ramp:['#C68B3D','#4FA895','#4C86A8']},
+  tmax:{label:'Max temperature',unit:'°C',key:'tmax_c',lo:15,hi:42,ramp:['#4C86A8','#E8C468','#C1553B']},
+  tmin:{label:'Min temperature',unit:'°C',key:'tmin_c',lo:5,hi:30,ramp:['#4C86A8','#E8C468','#C1553B']},
+  hum:{label:'Humidity',unit:'%',key:'humidity_pct',lo:30,hi:100,ramp:['#C68B3D','#4FA895','#4C86A8']},
   wind:{label:'Wind',unit:'km/h',key:'wind_kmph',lo:0,hi:20,ramp:['#4FA895','#8E7CC3','#C1553B']}
 };
-let month=new Date().getMonth()+1, metric='rain', cache={}, curBlock=null, fitFor=null, timer=null, trend=null, cmp=null;
+let day=1, metric='rain', cache={}, curBlock=null, fitFor=null, timer=null, trend=null, cmp=null;
 Chart.defaults.color='#9fb3aa'; Chart.defaults.font.family='IBM Plex Sans';
 
 const rgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
 function ramp(v,M){const t=Math.min(1,Math.max(0,(v-M.lo)/(M.hi-M.lo)));const s=t<.5?0:1,u=t<.5?t*2:(t-.5)*2;
   const a=rgb(M.ramp[s]),b=rgb(M.ramp[s+1]);return 'rgb('+a.map((x,i)=>Math.round(x+(b[i]-x)*u)).join(',')+')';}
-async function api(p){const r=await fetch(API+p);if(!r.ok)throw new Error(r.status);return r.json();}
+async function api(p){const r=await fetch(API+p);if(!r.ok)throw new Error(r.status+' '+(await r.text()));return r.json();}
+const dayOf=(p,d=day)=>p.days[d-1];
+const fmtDate=d=>new Date(d.date+'T00:00').toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'});
 
 // ---------- map ----------
-const map=L.map('map').setView([25.3,85.0],9);
+const map=L.map('map').setView([25.1,84.9],9);
 const sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:18,attribution:'Imagery © Esri'});
 const street=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:18,attribution:'Map © Esri'});
 const names=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:18});
 const group=L.layerGroup();
 sat.addTo(map);names.addTo(map);group.addTo(map);
-const ctl=L.control.layers({Satellite:sat,Street:street},{'Place names':names,'Panchayat data':group}).addTo(map);
+const ctl=L.control.layers({Satellite:sat,Street:street},{'Place names':names,'Panchayat forecast':group}).addTo(map);
 fetch('https://api.rainviewer.com/public/weather-maps.json').then(r=>r.json()).then(d=>{
   const p=d.radar.past,l=p[p.length-1];
   ctl.addOverlay(L.tileLayer(`${d.host}${l.path}/256/{z}/{x}/{y}/2/1_1.png`,{opacity:.6,maxNativeZoom:7,maxZoom:18,attribution:'Radar © RainViewer'}),'Rain radar (live, now)');
@@ -149,27 +166,28 @@ legend.onAdd=()=>{legEl=L.DomUtil.create('div','legend glass');return legEl;};le
 function updLegend(){const M=METRICS[metric];
   legEl.innerHTML=`<b>${M.label} (${M.unit})</b><div class="ramp" style="background:linear-gradient(90deg,${M.ramp.join(',')})"></div><div class="lr"><span>${M.lo}</span><span>${M.hi}+</span></div>`;}
 
-function drawMarkers(rows,selId){
-  const M=METRICS[metric];group.clearLayers();const pts=[];
-  rows.forEach(r=>{const v=r[M.key],sel=r.panchayat_id===selId;
-    const t=Math.min(1,Math.max(0,(v-M.lo)/(M.hi-M.lo)));
-    const m=L.circleMarker([r.lat,r.lon],{radius:15+t*10+(sel?4:0),color:sel?'#fff':'#0d1c17',weight:sel?3:1.5,fillColor:ramp(v,M),fillOpacity:.88});
-    m.bindTooltip(String(Math.round(v)),{permanent:true,direction:'center',className:'vlabel'});
-    m.on('click',()=>{$('panchayat').value=r.panchayat_id;render();});
-    m.addTo(group);pts.push([r.lat,r.lon]);});
-  if(fitFor!==curBlock&&pts.length){map.fitBounds(pts,{padding:[80,80],maxZoom:12});fitFor=curBlock;}
+function drawMap(block,selId){
+  const M=METRICS[metric];group.clearLayers();
+  const byId=Object.fromEntries(block.panchayats.map(p=>[p.panchayat_id,p]));
+  const layer=L.geoJSON(block.geo,{style:f=>{const p=byId[f.properties.panchayat_id],v=dayOf(p)[M.key],sel=p.panchayat_id===selId;
+      return {color:sel?'#fff':'#0d1c17',weight:sel?3:1,fillColor:ramp(v,M),fillOpacity:.72};},
+    onEachFeature:(f,l)=>{const p=byId[f.properties.panchayat_id];
+      l.bindTooltip(`<b>${p.panchayat}</b><br>${M.label}: ${dayOf(p)[M.key]} ${M.unit}`,{sticky:true});
+      l.on('click',()=>{$('panchayat').value=p.panchayat_id;render();});}}).addTo(group);
+  block.panchayats.forEach(p=>L.marker([p.lat,p.lon],{opacity:0,interactive:false})
+    .bindTooltip(String(Math.round(dayOf(p)[M.key])),{permanent:true,direction:'center',className:'vlabel'}).addTo(group));
+  if(fitFor!==curBlock){map.fitBounds(layer.getBounds(),{padding:[30,30]});fitFor=curBlock;}
 }
 
 // ---------- data loading ----------
 async function init(){
-  try{const d=await api('/districts');$('apiStatus').textContent='backend connected';$('apiStatus').className='status ok';
-    $('district').innerHTML=d.map(x=>`<option>${x}</option>`).join('');await fillBlocks();showSkill();}
-  catch(e){$('apiStatus').textContent='backend offline — start uvicorn';}
-}
-async function showSkill(){
-  try{const s=await api('/model/skill'),r=s.metrics.rainfall_mm,t=s.metrics.temperature_c;
-    $('skill').textContent=`Model check (${s.data}, unseen panchayats): rainfall error ${r.model_mae} mm vs ${r.baseline_mae} mm for the raw block forecast (${r.improvement_pct>0?r.improvement_pct+'% better':'no gain'}); temperature ${t.model_mae} °C vs ${t.baseline_mae} °C.`;}
-  catch(e){}
+  try{
+    const meta=await api('/meta');
+    if(meta.simulated)$('banner').style.display='block';
+    $('prov').textContent=`Block forecast: ${meta.block_forecast_model} via Open-Meteo (stand-in for IMD's block forecast) · Model trained on ${meta.history} against ${meta.truth_model} · ${meta.panchayats} gram panchayats in ${meta.blocks} blocks`;
+    const d=await api('/districts');$('apiStatus').textContent='backend connected';$('apiStatus').className='status ok';
+    $('district').innerHTML=d.map(x=>`<option>${x}</option>`).join('');await fillBlocks();showSkill();
+  }catch(e){$('apiStatus').textContent='backend offline — start uvicorn';console.error(e);}
 }
 async function fillBlocks(){
   const b=await api('/blocks/'+encodeURIComponent($('district').value));
@@ -177,66 +195,93 @@ async function fillBlocks(){
 }
 async function loadBlock(){
   const block=$('block').value;$('busy').style.display='flex';
-  if(!cache[block])cache[block]=await Promise.all(MON.map((_,i)=>api(`/forecast/block/${encodeURIComponent(block)}?month=${i+1}`)));
-  curBlock=block;
-  $('panchayat').innerHTML=cache[block][0].map(r=>`<option value="${r.panchayat_id}">${r.panchayat}</option>`).join('');
-  $('busy').style.display='none';render();
+  try{
+    if(!cache[block]){const [fc,geo]=await Promise.all([api('/forecast/block/'+encodeURIComponent(block)),api('/geo/block/'+encodeURIComponent(block))]);cache[block]={...fc,geo};}
+  }finally{$('busy').style.display='none';}
+  curBlock=block;const B=cache[block];
+  $('panchayat').innerHTML=[...B.panchayats].sort((a,b)=>a.panchayat.localeCompare(b.panchayat)).map(p=>`<option value="${p.panchayat_id}">${p.panchayat}</option>`).join('');
+  render();
 }
 
 // ---------- render ----------
 function render(){
-  const rows=cache[curBlock][month-1];
-  const sel=rows.find(r=>r.panchayat_id===$('panchayat').value)||rows[0];
+  const B=cache[curBlock],rows=B.panchayats;
+  const sel=rows.find(p=>p.panchayat_id===$('panchayat').value)||rows[0];
   $('panchayat').value=sel.panchayat_id;
-  $('monthLbl').textContent=MON[month-1];$('slider').value=month;$('cmpMonth').textContent=MON[month-1];
-  updLegend();drawMarkers(rows,sel.panchayat_id);
+  const d=dayOf(sel),label=fmtDate(d);
+  $('dayLbl').textContent=label;$('slider').value=day;$('cmpDay').textContent=label;$('advDay').textContent=label;$('alertDay').textContent=label;
+  updLegend();drawMap(B,sel.panchayat_id);
 
-  $('selName').textContent=sel.panchayat;$('crumb').textContent=`${sel.district} → ${sel.block} → ${sel.panchayat}`;
-  $('diffBox').innerHTML=`IMD block forecast <b>${sel.block_forecast_rain_mm} mm</b> → AI panchayat forecast <b>${sel.rainfall_mm} mm</b>`;
-  const dl=+(sel.rainfall_mm-sel.block_forecast_rain_mm).toFixed(1);
-  $('kRain').textContent=sel.rainfall_mm+' mm';
+  $('selName').textContent=sel.panchayat;
+  $('crumb').textContent=`${sel.district} → ${sel.block} → ${sel.panchayat} · ${sel.area_km2} km² · forecast issued ${B.issued_at} (${B.status})`;
+  $('diffBox').innerHTML=`Block forecast <b>${d.block_forecast.rainfall_mm} mm</b> → panchayat forecast <b>${d.rainfall_mm} mm</b> (${d.rain_category})`;
+  const dl=+(d.rainfall_mm-d.block_forecast.rainfall_mm).toFixed(1);
+  $('kRain').textContent=d.rainfall_mm+' mm';
   $('kDelta').textContent=(dl>=0?'+':'')+dl+' mm vs block forecast';$('kDelta').className='d'+(dl<0?' neg':'');
-  $('kTemp').textContent=sel.temperature_c+' °C';$('kHum').textContent=sel.humidity_pct+' %';
-  $('kWind').textContent=sel.wind_kmph+' km/h';$('kProb').textContent=sel.rain_probability_pct+' %';
-  $('probBar').style.width=sel.rain_probability_pct+'%';
+  $('kTemp').textContent=`${Math.round(d.tmax_c)}° / ${Math.round(d.tmin_c)}°`;$('kHum').textContent=d.humidity_pct+' %';
+  $('kWind').textContent=d.wind_kmph+' km/h';$('kCloud').textContent=`from ${d.wind_dir} · cloud ${d.cloud_octa??'-'}/8`;
+  $('kProb').textContent=d.rain_chance_pct+' %';$('probBar').style.width=d.rain_chance_pct+'%';
 
-  // IMD 24-hour rainfall categories come from the backend (rain_category)
-  $('advIntro').textContent=sel.rainfall_mm>=64.5?`🌧️ ${sel.rain_category} expected`:sel.rainfall_mm>=15.6?`🌦️ ${sel.rain_category} expected`
-    :sel.temperature_c>=36?'☀️ Hot and dry conditions':`⛅ ${sel.rain_category} expected`;
-  $('advList').innerHTML=sel.advisory.map(t=>`<li>${t}</li>`).join('');
-  const al=rows.filter(r=>r.rainfall_mm>=15.6||r.temperature_c>=38);
-  $('alerts').innerHTML=al.length?al.map(r=>`<li data-id="${r.panchayat_id}"><b>${r.panchayat}</b> — ${r.rainfall_mm>=15.6?r.rain_category+', '+r.rainfall_mm+' mm':'Heat, '+r.temperature_c+' °C'}</li>`).join('')
-    :`<li class="ok">No moderate-or-heavier rain or heat alerts in this block for ${MON[month-1]}.</li>`;
+  $('advIntro').textContent=(d.rainfall_mm>=64.5?'🌧️ ':d.rainfall_mm>=15.6?'🌦️ ':d.tmax_c>=36?'☀️ ':'⛅ ')+`${d.rain_category} · ${Math.round(d.tmax_c)}°/${Math.round(d.tmin_c)}°C`;
+  $('advList').innerHTML=d.advisory.map(t=>`<li>${t}</li>`).join('');
+  $('outlook').textContent='5-day outlook: '+sel.outlook;
+  // Alerts: one summary line per hazard, then the five most affected panchayats (clickable)
+  const hazards=[
+    {name:'Moderate-or-heavier rain',test:x=>x.rainfall_mm>=15.6,val:x=>x.rainfall_mm,unit:'mm',txt:x=>x.rain_category},
+    {name:'Very hot (≥40 °C)',test:x=>x.tmax_c>=40,val:x=>x.tmax_c,unit:'°C',txt:()=>'Very hot'},
+    {name:'Frost risk (≤4 °C)',test:x=>x.tmin_c<=4,val:x=>-x.tmin_c,unit:'°C',txt:()=>'Frost risk'}];
+  let html='';
+  hazards.forEach(h=>{
+    const hit=rows.filter(p=>h.test(dayOf(p))).sort((a,b)=>h.val(dayOf(b))-h.val(dayOf(a)));
+    if(!hit.length)return;
+    const vals=hit.map(p=>Math.abs(h.val(dayOf(p))));
+    html+=`<li class="ok" style="border-left-color:var(--heavy)"><b>${h.name}</b> in ${hit.length} of ${rows.length} panchayats (${Math.min(...vals)}–${Math.max(...vals)} ${h.unit})</li>`;
+    html+=hit.slice(0,5).map(p=>`<li data-id="${p.panchayat_id}"><b>${p.panchayat}</b> — ${h.txt(dayOf(p))}, ${Math.abs(h.val(dayOf(p)))} ${h.unit}</li>`).join('');
+  });
+  $('alerts').innerHTML=html||`<li class="ok">No moderate-or-heavier rain, heat or frost alerts on ${label}.</li>`;
   charts(sel,rows);
 }
 function charts(sel,rows){
-  const all=cache[curBlock],id=sel.panchayat_id,pr=MON.map((_,i)=>i+1===month?7:2);
-  const td={labels:MON,datasets:[
-    {label:'AI panchayat',data:all.map(m=>m.find(r=>r.panchayat_id===id).rainfall_mm),borderColor:'#4FA895',backgroundColor:'#4FA89533',fill:true,tension:.35,pointRadius:pr},
-    {label:'IMD block',data:all.map(m=>m[0].block_forecast_rain_mm),borderColor:'#4C86A8',tension:.35,pointRadius:pr},
-    {label:'Historical avg',data:all.map(()=>sel.hist_avg_rainfall_mm),borderColor:'#9fb3aa',borderDash:[5,5],pointRadius:0}]};
-  const sorted=[...rows].sort((a,b)=>b.rainfall_mm-a.rainfall_mm),M=METRICS.rain;
-  const cd={labels:sorted.map(r=>r.panchayat),datasets:[{data:sorted.map(r=>r.rainfall_mm),
-    backgroundColor:sorted.map(r=>r.panchayat_id===id?'#EDE6D6':ramp(r.rainfall_mm,M)),borderRadius:4}]};
+  const labels=sel.days.map(fmtDate);
+  const td={labels,datasets:[
+    {type:'bar',label:'Panchayat rain (mm)',data:sel.days.map(x=>x.rainfall_mm),backgroundColor:sel.days.map((_,i)=>i+1===day?'#4FA895':'#4FA89566'),borderRadius:4,yAxisID:'y'},
+    {type:'line',label:'Block rain (mm)',data:sel.days.map(x=>x.block_forecast.rainfall_mm),borderColor:'#4C86A8',tension:.3,yAxisID:'y'},
+    {type:'line',label:'Panchayat max °C',data:sel.days.map(x=>x.tmax_c),borderColor:'#E8C468',borderDash:[5,4],tension:.3,yAxisID:'y2'}]};
+  const sorted=[...rows].sort((a,b)=>dayOf(b).rainfall_mm-dayOf(a).rainfall_mm),M=METRICS.rain;
+  const cd={labels:sorted.map(p=>p.panchayat),datasets:[{data:sorted.map(p=>dayOf(p).rainfall_mm),
+    backgroundColor:sorted.map(p=>p.panchayat_id===sel.panchayat_id?'#EDE6D6':ramp(dayOf(p).rainfall_mm,M)),borderRadius:4}]};
   const grid={color:'#2f4d4288'};
-  if(trend){trend.data=td;trend.update();}else trend=new Chart($('trend'),{type:'line',data:td,options:{maintainAspectRatio:false,scales:{y:{beginAtZero:true,grid},x:{grid:{display:false}}},plugins:{legend:{position:'bottom'}}}});
-  if(cmp){cmp.data=cd;cmp.update();}else cmp=new Chart($('cmp'),{type:'bar',data:cd,options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,grid},y:{grid:{display:false}}}}});
+  if(trend){trend.data=td;trend.update();}else trend=new Chart($('trend'),{data:td,options:{maintainAspectRatio:false,
+    scales:{y:{beginAtZero:true,grid,title:{display:true,text:'mm'}},y2:{position:'right',grid:{display:false},title:{display:true,text:'°C'}},x:{grid:{display:false}}},plugins:{legend:{position:'bottom'}}}});
+  if(cmp){cmp.data=cd;cmp.update();}else cmp=new Chart($('cmp'),{type:'bar',data:cd,options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,grid},y:{grid:{display:false},ticks:{autoSkip:false,font:{size:10}}}}}});
+}
+async function showSkill(){
+  try{
+    const s=await api('/model/skill'),rows=Object.values(s.variables);
+    const pct=x=>(x>0?'−':'+')+Math.abs(x).toFixed(0)+'%';
+    $('skillTable').innerHTML='<tr><th>Variable</th><th>Our model</th><th>Block forecast as-is</th><th>Bias-corrected block</th><th>Interpolated blocks</th><th>Error vs block</th></tr>'+
+      rows.map(r=>{const u=r.unseen_panchayats,m=u.mae,f=x=>x.toFixed(2);return `<tr><td>${r.name}</td><td>${f(m.model)}</td><td>${f(m.block_forecast)}</td><td>${f(m.bias_corrected_block)}</td><td>${f(m.interpolated_blocks)}</td><td class="${u.improvement_vs_block_forecast_pct>0?'good':'bad'}">${pct(u.improvement_vs_block_forecast_pct)}</td></tr>`;}).join('');
+    const b=s.rain_chance.unseen_panchayats.brier;
+    $('skillNote').innerHTML=`Mean absolute error on <b>${s.split.unseen_panchayats} panchayats the model never saw</b>, over ${s.split.test_period} (held out from training). `+
+      `Chance of rain, Brier score (lower is better): model ${b.model}, block yes/no ${b.block_forecast_yes_no}, climatology ${b.monthly_climatology}. `+
+      `Truth: ${s.data.truth} (~9 km grid, a stand-in until panchayat rain-gauge data is available).`+(s.data.source==='mock'?' <b>These scores are from simulated test data.</b>':'');
+  }catch(e){$('skillNote').textContent='Run train_model.py to see validation results.';}
 }
 
 // ---------- events ----------
 $('district').onchange=fillBlocks;$('block').onchange=loadBlock;$('panchayat').onchange=render;
-$('slider').oninput=e=>{month=+e.target.value;render();};
+$('slider').oninput=e=>{day=+e.target.value;render();};
 $('metricBtns').onclick=e=>{const b=e.target.closest('button');if(!b)return;metric=b.dataset.m;
   [...$('metricBtns').children].forEach(x=>x.classList.toggle('on',x===b));render();};
 $('alerts').onclick=e=>{const li=e.target.closest('li[data-id]');if(li){$('panchayat').value=li.dataset.id;render();}};
 $('play').onclick=()=>{
   if(timer){clearInterval(timer);timer=null;$('play').textContent='▶';return;}
-  $('play').textContent='⏸';timer=setInterval(()=>{month=month%12+1;render();},1100);
+  $('play').textContent='⏸';timer=setInterval(()=>{day=day%5+1;render();},1300);
 };
 $('csv').onclick=()=>{
-  let out='month,panchayat,rainfall_mm,block_forecast_mm,temperature_c,humidity_pct,wind_kmph,rain_probability_pct\n';
-  cache[curBlock].forEach((rows,i)=>rows.forEach(r=>out+=[MON[i],r.panchayat,r.rainfall_mm,r.block_forecast_rain_mm,r.temperature_c,r.humidity_pct,r.wind_kmph,r.rain_probability_pct].join(',')+'\n'));
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([out],{type:'text/csv'}));a.download=`aeroatmos_${curBlock}.csv`;a.click();
+  let out='date,panchayat,panchayat_id,rainfall_mm,rain_category,rain_chance_pct,block_rainfall_mm,tmax_c,tmin_c,humidity_pct,wind_kmph,wind_dir\n';
+  cache[curBlock].panchayats.forEach(p=>p.days.forEach(x=>out+=[x.date,p.panchayat,p.panchayat_id,x.rainfall_mm,x.rain_category,x.rain_chance_pct,x.block_forecast.rainfall_mm,x.tmax_c,x.tmin_c,x.humidity_pct,x.wind_kmph,x.wind_dir].join(',')+'\n'));
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([out],{type:'text/csv'}));a.download=`aeroatmos_${curBlock}_5day.csv`;a.click();
 };
 init();
 </script>
